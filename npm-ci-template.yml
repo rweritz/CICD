@@ -1,0 +1,71 @@
+parameters:
+- name: workingDir
+  type: string
+- name: publishFeed
+  type: string
+  default: ''
+- name: verbose
+  type: boolean
+  default: false
+- name: includeTestStep
+  type: boolean
+  default: false
+
+steps:
+- task: gitversion/setup@0
+  displayName: Install GitVersion
+  inputs:
+    versionSpec: '5.3.7'
+
+- task: gitversion/execute@0
+  displayName: Determine version
+  inputs:
+    configFilePath: 'gitversion.yml'
+    useConfigFile: true
+
+- script: |
+    echo FullSemVer: $(fullSemVer)
+    echo ##vso[build.updatebuildnumber]$(fullSemVer)
+  displayName: Update build number
+
+- task: Npm@1
+  displayName: NPM install
+  inputs:
+    command: install
+    workingDir: ${{ parameters.workingDir }}
+    verbose: ${{ parameters.verbose }}
+
+- task: Npm@1
+  displayName: NPM update version
+  inputs:
+    command: custom
+    customCommand: 'version $(GitVersion.SemVer)'
+    workingDir: ${{ parameters.workingDir }}
+    verbose: ${{ parameters.verbose }}
+
+- task: Npm@1
+  displayName: NPM run build
+  inputs:
+    command: custom
+    customCommand: 'run build'
+    workingDir: ${{ parameters.workingDir }}
+    verbose: ${{ parameters.verbose }}
+
+- ${{ if eq(parameters.includeTestStep, true) }}:
+  - task: Npm@1
+    displayName: NPM run test
+    inputs:
+      command: custom
+      customCommand: 'run test'
+      workingDir: ${{ parameters.workingDir }}
+      verbose: ${{ parameters.verbose }}
+
+- ${{ if ne(parameters.publishFeed, '') }}:
+  - task: Npm@1
+    displayName: NPM publish
+    inputs:
+      command: publish
+      workingDir: ${{ parameters.workingDir }}
+      publishRegistry: useFeed
+      publishFeed: ${{ parameters.publishFeed }}
+      verbose: ${{ parameters.verbose }}
