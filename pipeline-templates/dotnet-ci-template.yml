@@ -10,7 +10,8 @@ parameters:
   type: string
 
 variables:
-  GitVersion.SemVer: ''
+- name: GitVersion.SemVer
+  value: ''
 
 steps:
 - task: UseDotNet@2
