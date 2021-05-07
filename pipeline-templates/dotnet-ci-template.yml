@@ -9,56 +9,52 @@ parameters:
 - name: publishFeed
   type: string
 
-jobs:
-- job: InitialJob
-  variables:
-    GitVersion.SemVer: ''
-  steps:
-  - task: UseDotNet@2
-    displayName: Install .net core
-    inputs:
-      version: '5.0.x'
-      packageType: runtime
+steps:
+- task: UseDotNet@2
+  displayName: Install .net core
+  inputs:
+    version: '5.0.x'
+    packageType: runtime
 
-  - task: UseGitVersion@5
-    displayName: gitversion
-    inputs:
-      versionSpec: '5.x'
-      updateAssemblyInfo: true
+- task: UseGitVersion@5
+  displayName: gitversion
+  inputs:
+    versionSpec: '5.x'
+    updateAssemblyInfo: true
 
+- task: DotNetCoreCLI@2
+  displayName: Restore .net project(s)
+  inputs:
+    command: restore
+    feedRestore: ${{ parameters.restoreFeed }}
+
+- task: DotNetCoreCLI@2
+  displayName: Build .net project(s)
+  inputs:
+    command: build
+    projects: '**/*.csproj'
+    arguments: '--configuration ${{ parameters.buildConfiguration }}'
+    versioningScheme: byEnvVar
+    versionEnvVar: 'GitVersion.SemVer'
+
+- task: DotNetCoreCLI@2
+  displayName: Test .net project(s)
+  inputs:
+    command: test
+    projects: '**/*Test/*.csproj'
+    arguments: '--configuration ${{ parameters.buildConfiguration }} --collect "Code coverage"'
+
+- task: DotNetCoreCLI@2
+  displayName: Pack .net project(s)
+  inputs: 
+    command: pack
+    versioningScheme: byEnvVar
+    versionEnvVar: 'GitVersion.NuGetVersionV2'
+
+- ${{ if ne(parameters.publishFeed, '') }}:
   - task: DotNetCoreCLI@2
-    displayName: Restore .net project(s)
+    displayName: Push .net project(s)
     inputs:
-      command: restore
-      feedRestore: ${{ parameters.restoreFeed }}
-
-  - task: DotNetCoreCLI@2
-    displayName: Build .net project(s)
-    inputs:
-      command: build
-      projects: '**/*.csproj'
-      arguments: '--configuration ${{ parameters.buildConfiguration }}'
-      versioningScheme: byEnvVar
-      versionEnvVar: 'GitVersion.SemVer'
-
-  - task: DotNetCoreCLI@2
-    displayName: Test .net project(s)
-    inputs:
-      command: test
-      projects: '**/*Test/*.csproj'
-      arguments: '--configuration ${{ parameters.buildConfiguration }} --collect "Code coverage"'
-
-  - task: DotNetCoreCLI@2
-    displayName: Pack .net project(s)
-    inputs: 
-      command: pack
-      versioningScheme: byEnvVar
-      versionEnvVar: 'GitVersion.NuGetVersionV2'
-
-  - ${{ if ne(parameters.publishFeed, '') }}:
-    - task: DotNetCoreCLI@2
-      displayName: Push .net project(s)
-      inputs:
-        command: push
-        searchPatternPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;!$(Build.ArtifactStagingDirectory)/*.Test.nupkg'
-        feedPublish: ${{ parameters.publishFeed }}
+      command: push
+      searchPatternPush: '$(Build.ArtifactStagingDirectory)/*.nupkg;!$(Build.ArtifactStagingDirectory)/*.Test.nupkg'
+      feedPublish: ${{ parameters.publishFeed }}
