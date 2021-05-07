@@ -9,6 +9,9 @@ parameters:
 - name: publishFeed
   type: string
 
+variables:
+  GitVersion.SemVer: ''
+
 steps:
 - task: UseDotNet@2
   displayName: Install .net core
@@ -16,20 +19,11 @@ steps:
     version: '5.0.x'
     packageType: runtime
 
-- task: gitversion/setup@0
-  displayName: Install GitVersion
+- task: UseGitVersion@5
+  displayName: gitversion
   inputs:
-    versionSpec: '5.3.7'
-
-- task: gitversion/execute@0
-  displayName: Determine and update version
-  inputs:
-    additionalArguments: '/updateprojectfiles'
-
-- script: |
-    echo FullSemVer: $(fullSemVer)
-    echo ##vso[build.updatebuildnumber]$(fullSemVer)
-  displayName: Update build number
+    versionSpec: '5.x'
+    updateAssemblyInfo: true
 
 - task: DotNetCoreCLI@2
   displayName: Restore .net project(s)
@@ -43,6 +37,8 @@ steps:
     command: build
     projects: '**/*.csproj'
     arguments: '--configuration ${{ parameters.buildConfiguration }}'
+    versioningScheme: byEnvVar
+    versionEnvVar: 'GitVersion.SemVer'
 
 - task: DotNetCoreCLI@2
   displayName: Test .net project(s)
