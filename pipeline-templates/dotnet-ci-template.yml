@@ -20,7 +20,7 @@ steps:
   displayName: gitversion
   inputs:
     versionSpec: '5.x'
-    updateAssemblyInfo: true
+    additionalArguments: '/updateprojectfiles'
 
 - task: DotNetCoreCLI@2
   displayName: Restore .net project(s)
